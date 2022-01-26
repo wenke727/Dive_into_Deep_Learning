@@ -11,5 +11,7 @@
 ## Ref
 
 [动手学深度学习 2.0.0-beta0 documentation (d2l.ai)](https://zh.d2l.ai/index.html)
+
 Jupyter: [Amax](http://192.168.135.15:8888/tree?)
-👨‍💻Code: https://zh-v2.d2l.ai/d2l-zh-2.0.0.zip
+
+👨‍💻Code: [d2l-zh-2.0.0.zip](https://zh-v2.d2l.ai/d2l-zh-2.0.0.zip)
