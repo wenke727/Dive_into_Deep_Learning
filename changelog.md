@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [chapter 3: Done] 2022-1-27
+
+- learned `03_linear-networks`
+
 ## [2022-1-26] 🪜
 
 - Initial commit 🎊
