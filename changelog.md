@@ -8,10 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2022-2-7]
+
+- 6 卷积神经网络
+
 ## [2022-1-29]
 
 - 5 深度学习计算
-- 6 卷积神经网络
 
 ## [chapter 4] 2022-1-28
 
