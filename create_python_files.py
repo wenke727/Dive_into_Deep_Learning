@@ -36,6 +36,11 @@ folder_13 = Path("./13_computer-vision")
 def create_python(lst, folder):
 
     file_header = """#%%
+%matplotlib inline
+import os
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
 import torch
 from torch import nn
 from torch.nn import functional as F

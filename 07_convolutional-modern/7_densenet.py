@@ -42,16 +42,6 @@ def transition_block(input_channels, num_channels):
     )
 
 # %%
-blk = DenseBlock(2, 3, 10)
-X = torch.randn(4, 3, 8, 8)
-Y = blk(X)
-Y.shape
-
-# %%
-blk = transition_block(23, 10)
-blk(Y).shape
-
-# %%
 """ DenseNet模型 """
 num_channels, growth_rate = 64, 32
 num_convs_dense_blocks = [4, 4, 4, 4]
@@ -84,4 +74,14 @@ lr, num_epochs, batch_size = 0.1, 10, 256
 train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size, resize=96)
 d2l.train_ch6(net, train_iter, test_iter, num_epochs, lr, d2l.try_gpu())
 
+
+
 # %%
+blk = DenseBlock(2, 3, 10)
+X = torch.randn(4, 3, 8, 8)
+Y = blk(X)
+Y.shape
+
+# %%
+blk = transition_block(23, 10)
+blk(Y).shape
