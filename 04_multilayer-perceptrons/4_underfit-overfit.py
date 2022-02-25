@@ -32,6 +32,33 @@ features[:2], poly_features[:2, :], labels[:2]
 
 # %%
 
+def train_epoch_ch3(net, train_iter, loss, updater):
+    """The training loop defined in Chapter 3.
+
+    Defined in :numref:`sec_softmax_scratch`"""
+    # Set the model to training mode
+    if isinstance(net, torch.nn.Module):
+        net.train()
+    # Sum of training loss, sum of training accuracy, no. of examples
+    metric = d2l.Accumulator(3)
+    for X, y in train_iter:
+        # Compute gradients and update parameters
+        y_hat = net(X)
+        l = loss(y_hat, y)
+        if isinstance(updater, torch.optim.Optimizer):
+            # Using PyTorch in-built optimizer & loss criterion
+            updater.zero_grad()
+            l.mean().backward()
+            updater.step()
+        else:
+            # Using custom built optimizer & loss criterion
+            l.sum().backward()
+            updater(X.shape[0])
+        metric.add(float(l.sum()), d2l.accuracy(y_hat, y), y.numel())
+    # Return training loss and training accuracy
+    return metric[0] / metric[2], metric[1] / metric[2]
+
+
 def evaluate_loss(net, data_iter, loss):
     metric = d2l.Accumulator(2)
     for X, y in data_iter:
@@ -42,6 +69,7 @@ def evaluate_loss(net, data_iter, loss):
         metric.add(l.sum(), l.numel())
         
     return metric[0] / metric[1]
+
 
 def train(train_features, test_features, train_labels, test_labels, num_epochs=400):
     loss = nn.MSELoss()
@@ -70,11 +98,10 @@ train(poly_features[:n_train, :4], poly_features[n_train:, :4], labels[:n_train]
 
 # %%
 # 从多项式特征中选择前2个维度，即1和x
-train(poly_features[:n_train, :2], poly_features[n_train:, :2],
-      labels[:n_train], labels[n_train:])
+train(poly_features[:n_train, :2], poly_features[n_train:, :2], labels[:n_train], labels[n_train:])
 
 # %%
 # 从多项式特征中选取所有维度
-train(poly_features[:n_train, :], poly_features[n_train:, :],
-      labels[:n_train], labels[n_train:], num_epochs=1500)
+train(poly_features[:n_train, :], poly_features[n_train:, :], labels[:n_train], labels[n_train:], num_epochs=1500)
+
 # %%

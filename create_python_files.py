@@ -33,6 +33,45 @@ lst_13 = [
 folder_13 = Path("./13_computer-vision")
 
 
+lst_8 = [
+    'sequence',
+    'text-preprocessing',
+    'language-models-and-dataset',
+    'rnn',
+    'rnn-scratch',
+    'rnn-concise',
+    'bptt'
+]
+
+folder_8 = Path("./08_recurrent-neural-networks")
+
+lst_9 = [
+    'gru',
+    'lstm',
+    'deep-rnn',
+    'bi-rnn',
+    'machine-translation-and-dataset',
+    'encoder-decoder',
+    'seq2seq',
+    'beam-search'
+]
+
+folder_9 = Path('./09_recurrent-modern')
+
+
+lst_10 = [
+    'attention-cues',
+    'nadaraya-waston',
+    'attention-scoring-functions',
+    'bahdanau-attention',
+    'multihead-attention',
+    'self-attention-and-positional-encoding',
+    'transformer'
+]
+
+folder_10 = Path("./10_attention-mechanisms")
+
+
 def create_python(lst, folder):
 
     file_header = """#%%
@@ -58,4 +97,4 @@ from d2l import torch as d2l
 
 
 if __name__ == "__main__":
-    create_python(lst_13, folder_13)
+    create_python(lst_10, folder_10)

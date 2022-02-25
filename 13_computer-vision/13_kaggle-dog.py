@@ -108,8 +108,7 @@ def evaluate_loss(data_iter, net, devices):
 
 
 # %%
-def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
-          lr_decay):
+def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period, lr_decay):
     # 只训练小型自定义输出网络
     net = nn.DataParallel(net, device_ids=devices).to(devices[0])
     trainer = torch.optim.SGD((param for param in net.parameters()
@@ -136,8 +135,7 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
             metric.add(l, labels.shape[0])
             timer.stop()
             if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
-                animator.add(epoch + (i + 1) / num_batches,
-                             (metric[0] / metric[1], None))
+                animator.add(epoch + (i + 1) / num_batches, (metric[0] / metric[1], None))
         measures = f'train loss {metric[0] / metric[1]:.3f}'
         if valid_iter is not None:
             valid_loss = evaluate_loss(valid_iter, net, devices)
