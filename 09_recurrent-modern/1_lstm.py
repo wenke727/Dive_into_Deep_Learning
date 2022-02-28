@@ -1,5 +1,4 @@
 #%%
-%matplotlib inline
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
@@ -76,6 +75,8 @@ d2l.train_ch8(model, train_iter, vocab, lr, num_epochs, device)
     
     
 # %%
+""" 简洁实现 """
+
 num_inputs = vocab_size
 lstm_layer = nn.LSTM(num_inputs, num_hiddens)
 model = d2l.RNNModel(lstm_layer, len(vocab))

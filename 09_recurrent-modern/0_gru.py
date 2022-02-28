@@ -10,10 +10,6 @@ from d2l import torch as d2l
 
 # %%
 
-batch_size, num_steps = 32, 35
-train_iter, vocab = d2l.load_data_time_machine(batch_size, num_steps)
-
-
 def get_params(vocab_size, num_hiddens, device):
     num_inputs = num_outputs = vocab_size
     
@@ -46,8 +42,6 @@ def init_gru_state(batch_size, num_hiddens, device):
     return (torch.zeros((batch_size, num_hiddens), device=device), )
 
 
-# %%
-
 def gru(inputs, state, params):
     W_xz, W_hz, b_z, W_xr, W_hr, b_r, W_xh, W_hh, b_h, W_hq, b_q = params
     H, = state
@@ -66,6 +60,11 @@ def gru(inputs, state, params):
 
 
 #%%
+
+batch_size, num_steps = 32, 35
+train_iter, vocab = d2l.load_data_time_machine(batch_size, num_steps)
+
+
 # [训练]与预测
 vocab_size, num_hiddens, device = len(vocab), 256, d2l.try_gpu()
 num_epochs, lr = 500, 1
@@ -73,4 +72,13 @@ model = d2l.RNNModelScratch(len(vocab), num_hiddens, device, get_params, init_gr
 d2l.train_ch8(model, train_iter, vocab, lr, num_epochs, device)
     
     
+# %%
+
+""" 简介实现 """
+num_inputs = vocab_size
+gru_layer = nn.GRU(num_inputs, num_hiddens)
+model = d2l.RNNModel(gru_layer, len(vocab))
+model = model.to(device)
+d2l.train_ch8(model, train_iter, vocab, lr, num_epochs, device)
+
 # %%

@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2022-2-28] 🎉🎉🎉
+
+- 9 现代卷积神经网络
+
 ## [2022-2-26]
 
 - 8 卷积神经网络
