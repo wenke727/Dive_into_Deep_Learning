@@ -14,7 +14,7 @@ from d2l import torch as d2l
 
 # %%
 class PositionWiseFFN(nn.Module):
-    """基于位置的前馈网络"""
+    """基于位置的前馈网络, FFN: Feed-forward Network"""
     def __init__(self, ffn_num_input, ffn_num_hiddens, ffn_outputs, **kwargs):
         super(PositionWiseFFN, self).__init__(**kwargs)
         
@@ -35,19 +35,22 @@ class AddNorm(nn.Module):
         self.ln = nn.LayerNorm(normalized_shape)
         
     def forward(self, X, Y):
-        return self.ln(self.dropout(Y)+X)
+        return self.ln(self.dropout(Y) + X)
 
 
 class EncoderBlock(nn.Module):
-    def __init__(self, key_size, query_size, value_size, num_hiddens, norm_shape, ffn_num_input, ffn_num_hiddens, num_heads, dropout, use_bias=False, **kwargs):
+    def __init__(self, key_size, query_size, value_size, num_hiddens, 
+                 norm_shape, ffn_num_input, ffn_num_hiddens, num_heads, 
+                 dropout, use_bias=False, **kwargs):
+        # TODO `norm_shape` meaning
         super(EncoderBlock, self).__init__(**kwargs)
         self.attention = d2l.MultiHeadAttention(key_size, query_size, value_size, num_hiddens, num_heads, dropout, use_bias)
         self.ffn       = PositionWiseFFN(ffn_num_input, ffn_num_hiddens, num_hiddens)
-        self.addnomal  = AddNorm(norm_shape, dropout)
+        self.addnorm1  = AddNorm(norm_shape, dropout)
         self.addnorm2  = AddNorm(norm_shape, dropout)
         
     def forward(self, X, valid_lens):
-        Y = self.addnomal(X, self.attention(X, X, X, valid_lens))
+        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens))
         
         return self.addnorm2(Y, self.ffn(Y))
 
@@ -73,7 +76,7 @@ class TransformerEncoder(d2l.Encoder):
             )
     
     def forward(self, X, valid_lens, *args):
-        # 此嵌⼊值乘以嵌⼊维度的平⽅根进⾏缩放
+        # 此嵌⼊值 x 嵌⼊维度的平⽅根进⾏缩放, 因为位置编码值在 -1 到 1 之间 # TODO ？？
         X = self.pos_encoding(self.embedding(X) * math.sqrt(self.num_hiddens))
         self.attention_weights = [None] * len(self.blks)
         for i, blk in enumerate(self.blks):
@@ -104,25 +107,35 @@ class DecoderBlock(nn.Module):
     def forward(self, X, state):
         enc_outputs, enc_valid_lens = state[0], state[1]
         
-        # state[2][self.i]包含着直到当前时间步第i个块解码的输出表⽰
+        # TODO 加起来的含义是？<- 经测试, `推理` 时调用
+        # During training, all the tokens of any output sequence are processed
+        # at the same time, so `state[2][self.i]` is `None` as initialized.
+        # When decoding any output sequence token by token during prediction,
+        # `state[2][self.i]` contains representations of the decoded output at
+        # the `i`-th block up to the current time step
         if state[2][self.i] is None:
             key_values = X
         else:
-            # TODO 加起来的含义是？<- 经测试, `推理` 时调用
+            # state[2][self.i]包含着直到当前时间步第i个块解码的输出表⽰
+            # `torch.cat`: Concatenates the given sequence of seq tensors in the given dimension
             key_values = torch.cat((state[2][self.i], X), axis=1)
+        # TODO state[2][self.i] 维度变化情况
         state[2][self.i] = key_values
         
         if self.training:
             batch_size, num_steps, _ = X.shape
+            # Shape of `dec_valid_lens`: (`batch_size`, `num_steps`), where
+            # every row is [1, 2, ..., `num_steps`], 
+            # TODO debug for details
             dec_valid_lens = torch.arange(1, num_steps + 1, device=X.device)\
                                   .repeat(batch_size, 1)
         else:
             dec_valid_lens = None
-            
-        X2 = self.attention1(X, key_values, key_values, dec_valid_lens)
+        
+        X2 = self.attention1(X, key_values, key_values, dec_valid_lens)   # (queries, keys, values, valid_lens)
         Y = self.addnorm1(X, X2)
         
-        Y2 = self.attention2(Y, enc_outputs, enc_outputs, enc_valid_lens)
+        Y2 = self.attention2(Y, enc_outputs, enc_outputs, enc_valid_lens) # (queries, keys, values, valid_lens)
         Z = self.addnorm2(Y, Y2)
         
         return self.addnorm3(Z, self.ffn(Z)), state
@@ -183,6 +196,76 @@ class EncoderDecoder(nn.Module):
         return self.decoder(dec_X, dec_state)
 
 
+def sequence_mask(X, valid_len, value=0):
+    """Mask irrelevant entries in sequences.
+
+    Defined in :numref:`sec_seq2seq_decoder`"""
+    maxlen = X.size(1)
+    mask = torch.arange((maxlen), dtype=torch.float32,
+                        device=X.device)[None, :] < valid_len[:, None]
+    X[~mask] = value
+    return X
+
+
+class MaskedSoftmaxCELoss(nn.CrossEntropyLoss):
+    """The softmax cross-entropy loss with masks.
+
+    Defined in :numref:`sec_seq2seq_decoder`"""
+    # `pred` shape: (`batch_size`, `num_steps`, `vocab_size`)
+    # `label` shape: (`batch_size`, `num_steps`)
+    # `valid_len` shape: (`batch_size`,)
+    def forward(self, pred, label, valid_len):
+        weights = torch.ones_like(label)
+        weights = sequence_mask(weights, valid_len)
+        self.reduction='none'
+        unweighted_loss = super(MaskedSoftmaxCELoss, self).forward(
+            pred.permute(0, 2, 1), label)
+        weighted_loss = (unweighted_loss * weights).mean(dim=1)
+        return weighted_loss
+
+def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
+    """Train a model for sequence to sequence.
+
+    Defined in :numref:`sec_seq2seq_decoder`"""
+    def xavier_init_weights(m):
+        if type(m) == nn.Linear:
+            nn.init.xavier_uniform_(m.weight)
+        if type(m) == nn.GRU:
+            for param in m._flat_weights_names:
+                if "weight" in param:
+                    nn.init.xavier_uniform_(m._parameters[param])
+    net.apply(xavier_init_weights)
+    net.to(device)
+    optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+    loss = MaskedSoftmaxCELoss()
+    net.train()
+    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                            xlim=[10, num_epochs])
+    for epoch in range(num_epochs):
+        timer = d2l.Timer()
+        metric = d2l.Accumulator(2)  # Sum of training loss, no. of tokens
+        for batch in data_iter:
+            X, X_valid_len, Y, Y_valid_len = [x.to(device) for x in batch]
+            bos = torch.tensor([tgt_vocab['<bos>']] * Y.shape[0],
+                               device=device).reshape(-1, 1)
+            dec_input = d2l.concat([bos, Y[:, :-1]], 1)  # Teacher forcing
+            Y_hat, _ = net(X, dec_input, X_valid_len)
+            l = loss(Y_hat, Y, Y_valid_len)
+
+            optimizer.zero_grad()
+            l.sum().backward()  # Make the loss scalar for `backward`
+            d2l.grad_clipping(net, 1)
+            num_tokens = Y_valid_len.sum()
+            optimizer.step()
+
+            with torch.no_grad():
+                metric.add(l.sum(), num_tokens)
+
+        if (epoch + 1) % 10 == 0:
+            animator.add(epoch + 1, (metric[0] / metric[1],))
+    print(f'loss {metric[0] / metric[1]:.3f}, {metric[1] / timer.stop():.1f} '
+          f'tokens/sec on {str(device)}')
+
 def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
                     device, save_attention_weights=False):
     """Predict for sequence to sequence.
@@ -220,6 +303,7 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
     return ' '.join(tgt_vocab.to_tokens(output_seq)), attention_weight_seq
 
 
+#%%
 """ training """
 num_hiddens, num_layers, dropout, batch_size, num_steps = 32, 2, .1, 64, 10
 lr, num_epochs, device = .005, 200, d2l.try_gpu()
@@ -239,10 +323,11 @@ decoder = TransformerDecoder(
     norm_shape, ffn_num_input, ffn_num_hiddens, num_heads,
     num_layers, dropout
 )
-net = d2l.EncoderDecoder(encoder, decoder)
+net = EncoderDecoder(encoder, decoder)
 
-d2l.train_seq2seq(net, train_iter, lr, num_epochs, tgt_vocab, device)
+train_seq2seq(net, train_iter, lr, num_epochs, tgt_vocab, device)
 
+#%%
 # just for a check
 engs = ['go .', "i lost .", 'he\'s calm .', 'i\'m home .']
 fras = ['va !', 'j\'ai perdu .', 'il est calme .', 'je suis chez moi .']

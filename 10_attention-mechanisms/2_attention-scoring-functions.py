@@ -12,6 +12,8 @@ from d2l import torch as d2l
 
 # %%
 
+""" masked_softmax 测试 """
+
 def sequence_mask(X, valid_len, value=0):
     """Mask irrelevant entries in sequences.
 
@@ -46,9 +48,14 @@ def masked_softmax(X, valid_lens):
         )
         return nn.functional.softmax(X.reshape(shape), dim=-1)
 
+
+masked_softmax(torch.rand(2, 2, 4), torch.tensor([2, 3]))
+# masked_softmax(torch.rand(2, 2, 4), torch.tensor([[1, 3], [2, 4]]))
+
+
 # %%
+"""加性注意力"""
 class AdditiveAttention(nn.Module):
-    """加性注意力"""
     def __init__(self, key_size, query_size, num_hiddens, dropout, **kwargs):
         super(AdditiveAttention, self).__init__(**kwargs)
         self.w_k = nn.Linear(key_size, num_hiddens, bias=False)
@@ -58,15 +65,29 @@ class AdditiveAttention(nn.Module):
         self.dropout = nn.Dropout(dropout)
     
     def forward(self, queries, keys, values, valid_lens):
-        queries, keys = self.w_q(queries), self.w_k(keys)
-        features = queries.unsqueeze(2) + keys.unsqueeze(1)
+        queries, keys = self.w_q(queries), self.w_k(keys)   # (2, 1, 20) -> (2, 1, 8); (2, 10, 2) -> (2, 10, 8)
+        # sum them up with broadcasting
+        features = queries.unsqueeze(2) + keys.unsqueeze(1) # [2, 1, 10, 8] = [2, 1, 1, 8] + [2, 1, 10, 8]
         features = torch.tanh(features)
-        scores = self.w_v(features).squeeze(-1)
-        self.attention_weights = masked_softmax(scores, valid_lens)
+        scores = self.w_v(features).squeeze(-1)             # [2, 1, 10]
+        self.attention_weights = masked_softmax(scores, valid_lens) # [2, 1, 10]
         
-        return torch.bmm(self.dropout(self.attention_weights), values)
+        return torch.bmm(self.dropout(self.attention_weights), values) # [2, 1, 4] = [2, 1, 10] * [2, 10, 4]
     
-  
+
+# AdditiveAttention
+queries, keys = torch.normal(0, 1, (2, 1, 20)), torch.ones((2, 10, 2))
+values = torch.arange(40, dtype=torch.float32).reshape(1, 10, 4).repeat(2, 1, 1)
+valid_lens = torch.tensor([2, 6])
+
+attention = AdditiveAttention(key_size=2, query_size=20, num_hiddens=8, dropout=0.1)
+attention.eval()
+y = attention(queries, keys, values, valid_lens)
+
+d2l.show_heatmaps(attention.attention_weights.reshape((1, 1, 2, 10)),
+                  xlabel='Keys', ylabel='Queries')
+
+y.shape
 
 # %%
 """ Scaled Dot-product attention """
@@ -84,37 +105,25 @@ class DotProductAttention(nn.Module):
         self.attention_weights = masked_softmax(scores, valid_lens)
         
         return torch.bmm(self.dropout(self.attention_weights), values)
+
+
+# DotProductAttention
+queries = torch.normal(0, 1, (2, 1, 2))
+
+attention = DotProductAttention(dropout=0.5)
+attention.eval()
+
+# queries, keys, values: [2, 1, 2], [2, 10, 2], [2, 10, 4]
+y = attention(queries, keys, values, valid_lens) # [2, 1, 4], batch_size, queries_num, value_num
+
+d2l.show_heatmaps(attention.attention_weights.reshape((1, 1, 2, 10)),
+                  xlabel='Keys', ylabel='Queries')
         
+y.shape
     
 # %%
 
 # if __name__ == "__main__":
 
-# masked_softmax
-masked_softmax(torch.rand(2, 2, 4), torch.tensor([2, 3]))
-masked_softmax(torch.rand(2, 2, 4), torch.tensor([[1, 3], [2, 4]]))
-
-
-# AdditiveAttention
-queries, keys = torch.normal(0, 1, (2, 1, 20)), torch.ones((2, 10, 2))
-values = torch.arange(40, dtype=torch.float32).reshape(1, 10, 4).repeat(2, 1, 1)
-valid_lens = torch.tensor([2, 6])
-
-attention = AdditiveAttention(key_size=2, query_size=20, num_hiddens=8, dropout=0.1)
-attention.eval()
-attention(queries, keys, values, valid_lens)
-
-d2l.show_heatmaps(attention.attention_weights.reshape((1, 1, 2, 10)),
-                  xlabel='Keys', ylabel='Queries')
-
-
-# DotProductAttention
-queries = torch.normal(0, 1, (2, 1, 2))
-attention = DotProductAttention(dropout=0.5)
-attention.eval()
-attention(queries, keys, values, valid_lens)
-
-d2l.show_heatmaps(attention.attention_weights.reshape((1, 1, 2, 10)),
-                  xlabel='Keys', ylabel='Queries')
 
         

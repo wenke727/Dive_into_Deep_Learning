@@ -32,36 +32,38 @@ class MultiHeadAttention(nn.Module):
         self.num_heads = num_heads
         self.attention = d2l.DotProductAttention(dropout)
         
-        self.W_q = nn.Linear(query_size, num_hiddens, bias=bias)
-        self.W_k = nn.Linear(key_size, num_hiddens, bias=bias)
-        self.W_v = nn.Linear(value_size, num_hiddens, bias=bias)
+        # 全连接层体现如下
+        self.W_q = nn.Linear(query_size,  num_hiddens, bias=bias)
+        self.W_k = nn.Linear(key_size,    num_hiddens, bias=bias)
+        self.W_v = nn.Linear(value_size,  num_hiddens, bias=bias)
         self.W_o = nn.Linear(num_hiddens, num_hiddens, bias=bias)
+
 
     def forward(self, queris, keys, values, valid_lens):
         # TODO 理解维度变换
-        queris = transpose_qkv(self.W_q(queris), self.num_heads)
-        keys   = transpose_qkv(self.W_k(keys), self.num_heads)
-        values = transpose_qkv(self.W_v(values), self.num_heads)
+        queris = transpose_qkv(self.W_q(queris), self.num_heads)   # [10, 4, 20]; W_q: [2, 4, 100] -> [2, 4, 100]
+        keys   = transpose_qkv(self.W_k(keys),   self.num_heads)   # [10, 6, 20]
+        values = transpose_qkv(self.W_v(values), self.num_heads)   # [10, 6, 20]
         
         if valid_lens is not None:
             valid_lens = torch.repeat_interleave(valid_lens, repeats=self.num_heads, dim=0)
         
-        output = self.attention(queris, keys, values, valid_lens)
-        output_concat = transpose_output(output, self.num_heads)
+        output = self.attention(queris, keys, values, valid_lens) # [10, 4, 20]
+        output_concat = transpose_output(output, self.num_heads)  # [2, 4, 100]
         
-        return self.W_o(output_concat)
-    
+        return self.W_o(output_concat) # [2, 4, 100]
+
+
 num_hiddens, num_heads = 100, 5
-attention = MultiHeadAttention(num_hiddens, num_hiddens, num_hiddens, num_hiddens,num_heads, .5)
+attention = MultiHeadAttention(num_hiddens, num_hiddens, num_hiddens, num_hiddens, num_heads, .5)
 attention.eval()
 
         
+batch_size, num_queries = 2, 1
+num_kvpairs, valid_lens = 6, torch.tensor([3, 2])
+X = torch.ones((batch_size, num_queries, num_hiddens)) # [2, 4, 100]
+Y = torch.ones((batch_size, num_kvpairs, num_hiddens)) # [2, 6, 100]
 
-# %%
-batch_size, num_queries = 2, 4
-num_kvpairs, valid_lens =  6, torch.tensor([3, 2])
-X = torch.ones((batch_size, num_queries, num_hiddens))
-Y = torch.ones((batch_size, num_kvpairs, num_hiddens))
-attention(X, Y, Y, valid_lens).shape
+attention(X, Y, Y, valid_lens).shape # (batch_size, num_queries, num_hiddens)
 
 # %%

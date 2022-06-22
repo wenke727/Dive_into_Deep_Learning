@@ -45,11 +45,14 @@ plot_kernel_reg(y_hat)
 
 # %%
 """ ⾮参数注意⼒汇聚 """
+# ! Shape of `x_repeat`: (50, 50), where each row contains the same testing inputs (i.e., same queries)
 x_repeat = x_test.repeat_interleave(n_train).reshape((-1, n_train))
 attention_weights = F.softmax(-(x_repeat - x_train)**2/2, dim=1)
 
 y_hat = torch.matmul(attention_weights, y_train)
 plot_kernel_reg(y_hat)
+
+x_repeat.shape, x_train.shape, attention_weights.shape, y_train.shape, y_hat.shape
 
 
 # %%
@@ -66,10 +69,10 @@ class NWKernelRegression(nn.Module):
         self.w = nn.Parameter(torch.rand((1,), requires_grad=True))
         
     def forward(self, queries, keys, values):
-        queries = queries.repeat_interleave(keys.shape[1]).reshape((-1, keys.shape[1]))
-        self.attention_weights = F.softmax(-((queries - keys) * self.w) ** 2, dim=1)
+        queries = queries.repeat_interleave(keys.shape[1]).reshape((-1, keys.shape[1])) # [50, 49]
+        self.attention_weights = F.softmax(-((queries - keys) * self.w) ** 2, dim=1)    # [50, 49]
         
-        return torch.bmm(self.attention_weights.unsqueeze(1), values.unsqueeze(-1)).reshape(-1)
+        return torch.bmm(self.attention_weights.unsqueeze(1), values.unsqueeze(-1)).reshape(-1) # ([50, 1, 49], [50, 49, 1]  )
 
 
 # %%
@@ -90,7 +93,7 @@ trainer = torch.optim.SGD(net.parameters(), lr=.5)
 animator = d2l.Animator(xlabel='epoch', ylabel='loss', xlim=[1, 5])
 
 for epoch in range(5):
-    l = loss(net(x_train, keys, values), y_train)
+    l = loss(net(queries=x_train, keys=keys, values=values), y_train)
     
     trainer.zero_grad()
     l.sum().backward()

@@ -87,6 +87,7 @@ d2l.plot([time, time[n_train + tau:]],
 # %%
 max_steps = 64
 
+# [933, 68]
 features = torch.zeros((T - tau - max_steps + 1, tau + max_steps))
 # 列i（i<tau）是来自x的观测，其时间步从（i+1）到（i+T-tau-max_steps+1）
 for i in range(tau):

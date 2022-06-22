@@ -25,6 +25,7 @@ def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5), cma
     num_rows, num_cols = matrices.shape[:2]
     fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize, 
                                  sharex=True, sharey=True, squeeze=False)
+
     for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
         for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
             pcm = ax.imshow(matrix.detach().numpy(), cmap=cmap)

@@ -19,6 +19,7 @@ def read_time_machine():  #@save
     with open(d2l.download('time_machine'), 'r') as f:
         lines = f.readlines()
         
+    #  strip() 方法用于移除字符串头尾指定的字符（默认为空格或换行符）或字符序列
     return [re.sub('[^A-Za-z]+', ' ', line).strip().lower() for line in lines]
 
 lines = read_time_machine()
@@ -92,7 +93,7 @@ def count_corpus(tokens):
 
 def load_corpus_time_machine(max_tokens=-1):
     lines =read_time_machine()
-    tokens = tokenize(lines, 'char')
+    tokens = tokenize(lines, 'word')
 
     vocab = Vocab(tokens)
     # 因为时光机器数据集中的每个文本行不一定是一个句子或一个段落，
@@ -113,9 +114,11 @@ tokens = tokenize(lines)
 for i in range(11):
     print(tokens[i])
 
+#%%
 vocab = Vocab(tokens)
 print(list(vocab.token_to_idx.items())[:10])
 
+#%%
 for i in [0, 10]:
     print('文本:', tokens[i])
     print('索引:', vocab[tokens[i]])

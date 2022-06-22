@@ -189,3 +189,5 @@ train_ch8(net, train_iter, vocab, lr, num_epochs, d2l.try_gpu(),
 # def check
 predict_ch8('time traveller ', 10, net, vocab, d2l.try_gpu())
 
+
+# %%

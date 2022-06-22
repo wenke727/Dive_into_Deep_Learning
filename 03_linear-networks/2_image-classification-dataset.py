@@ -1,5 +1,4 @@
 #%%
-from mim import train
 from sklearn.utils import shuffle
 import torch
 import torchvision

@@ -12,12 +12,25 @@ from d2l import torch as d2l
 # %%
 """ Self-attention """
 num_hiddens, num_heads = 100, 5
-attention = d2l.MultiHeadAttention(num_hiddens, num_hiddens, num_hiddens, num_hiddens, num_heads, .5)
+attention = d2l.MultiHeadAttention(
+    key_size=num_hiddens, 
+    query_size=num_hiddens, 
+    value_size=num_hiddens, 
+    num_hiddens=num_hiddens, 
+    num_heads=num_heads, 
+    dropout=.5)
+
 attention.eval()
 
+attention
+
+nn.Linear
+
+#%%
+
 batch_size, num_queries, valid_lens = 2, 4, torch.tensor([3, 2])
-X = torch.ones((batch_size, num_queries, num_hiddens))
-y = attention(X, X, X, valid_lens)
+X = torch.ones((batch_size, num_queries, num_hiddens)) # [2, 4, 100]
+y = attention(X, X, X, valid_lens)                     # [2, 4, 100]
 
 X.shape, y.shape
 

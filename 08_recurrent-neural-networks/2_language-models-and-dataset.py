@@ -64,6 +64,11 @@ def seq_data_iter_random(corpus, batch_size, num_steps):
         yield torch.tensor(X), torch.tensor(Y)
         
 
+my_seq = list(range(35))
+for X, Y in seq_data_iter_random(my_seq, batch_size=2, num_steps=5):
+    print('X: ', list(X), '\tY:', list(Y))
+
+#%%
 def seq_data_iter_sequential(corpus, batch_size, num_steps):
     # TODO
     """使用顺序分区生成一个小批量子序列"""
@@ -81,6 +86,11 @@ def seq_data_iter_sequential(corpus, batch_size, num_steps):
         yield X, Y
 
 
+for X, Y in seq_data_iter_sequential(my_seq, batch_size=2, num_steps=5):
+    print('X: ', list(X), '\tY:', list(Y))
+
+#%%
+
 class SeqDataLoader:
     def __init__(self, batch_size, num_steps, use_random_iter, max_tokens):
         if use_random_iter:
@@ -88,23 +98,22 @@ class SeqDataLoader:
         else:
             self.data_iter_fn = seq_data_iter_sequential
         
-        self.corpus, self.vocab = d2l.load_corpus_time_machine(max_tokens)
+        self.corpus, self.vocab = d2l.load_corpus_time_machine(max_tokens, "word")
         self.batch_size, self.num_steps = batch_size, num_steps
     
     def __iter__(self):
         return self.data_iter_fn(self.corpus, self.batch_size, self.num_steps)
 
 
-#%%
-# check
-
-my_seq = list(range(35))
-for X, Y in seq_data_iter_random(my_seq, batch_size=2, num_steps=5):
-    print('X: ', X, '\nY:', Y)
+def load_data_time_machine(batch_size, num_steps, use_ramdom_iter=False, max_tokens=10000):
+    data_iter = SeqDataLoader(batch_size, num_steps, use_ramdom_iter, max_tokens)
+    
+    return data_iter, data_iter.vocab
 
 
-for X, Y in seq_data_iter_sequential(my_seq, batch_size=2, num_steps=5):
-    print('X: ', X, '\nY:', Y)
+batch_size = 4
+num_steps = 35
 
+train_iter, vocab = load_data_time_machine(batch_size, num_steps)
 
 # %%
